@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حفظ ومراجعة الجمل الإنجليزية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: #f8fafc;
+    }
+    .en-font {
+      font-family: 'Poppins', sans-serif;
+      direction: ltr;
+      text-align: left;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12">
+
+  <!-- Floating Selection Audio Menu -->
+  <div id="selectionPop" class="hidden fixed bg-slate-900 text-white rounded-lg shadow-xl px-3 py-1.5 z-[9999] flex items-center space-x-2 space-x-reverse text-xs font-medium border border-slate-700">
+    <button onclick="speakSelectedText()" class="hover:text-amber-400 flex items-center gap-1 transition">
+      <span>🔊</span> نطق
+    </button>
+    <span class="text-slate-600">|</span>
+    <button onclick="addSelectedWord()" class="hover:text-emerald-400 flex items-center gap-1 transition">
+      <span>➕</span> إضافة للكلمات
+    </button>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white py-6 shadow-md mb-8">
+    <div class="max-w-5xl mx-auto px-4 flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <span>📖</span> حافظ الجمل والمقالات الإنجليزية
+        </h1>
+        <p class="text-indigo-100 text-sm mt-1">أضف مقالاتك، قسّم الجمل، ترجم الكلمات تلقائياً، واستمع للنطق بسهولة</p>
+      </div>
+      <button onclick="openAddModal()" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-4 py-2.5 rounded-lg shadow transition flex items-center gap-2 text-sm">
+        <span>➕</span> إضافة موضوع جديد
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Container -->
+  <main class="max-w-5xl mx-auto px-4">
+    <!-- Search Bar -->
+    <div class="mb-6">
+      <input type="text" id="searchInput" oninput="renderArticles()" placeholder="ابحث في العناوين أو النصوص الإنجليزية..." class="w-full md:w-96 p-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="articlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <!-- Article Details Modal -->
+  <div id="articleModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
+        <h2 id="modalTitle" class="text-xl font-bold text-slate-800"></h2>
+        <div class="flex items-center gap-2">
+          <button onclick="openEditModal()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1">
+            <span>✏️</span> تعديل الموضوع
+          </button>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl px-2">✕</button>
+        </div>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div class="p-4 bg-indigo-50/50 border-b flex flex-wrap gap-3 items-center justify-between text-sm">
+        <div class="flex items-center gap-2">
+          <button id="viewParagraphBtn" onclick="setMode('paragraph')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium shadow-sm transition">مقال كامل</button>
+          <button id="viewSentencesBtn" onclick="setMode('sentences')" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-medium hover:bg-slate-300 transition">تقسيم جمل</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="speakFullText()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition">
+            <span>🔊</span> استماع للمقال
+          </button>
+          <select id="speechRate" class="bg-white border rounded-lg px-2 py-1 text-slate-700 font-medium text-xs">
+            <option value="0.75">سرعة: 0.75x</option>
+            <option value="1" selected>سرعة: 1.0x</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1">
+        <!-- Text View Container -->
+        <div>
+          <h3 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">النص الإنجليزي</h3>
+          <div id="modalContent" class="bg-slate-50 p-5 rounded-xl border border-slate-200 text-slate-800 leading-relaxed"></div>
+        </div>
+
+        <!-- Vocab Section -->
+        <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-5">
+          <h3 class="font-bold text-amber-900 mb-1 flex items-center gap-2">
+            <span>📚</span> قاموس الكلمات والمفردات
+          </h3>
+          <p class="text-xs text-amber-700 mb-3">اكتب أي كلمة إنجليزية أو عربية وسيتم ترجمتها تلقائياً (مثل: cat ⬅️ قطة)</p>
+          
+          <!-- Add Word Inputs with Auto-Translate -->
+          <div class="flex gap-2 mb-4 relative">
+            <div class="flex-1 relative">
+              <input type="text" id="wordEn" oninput="autoTranslate('en')" placeholder="الكلمة إنجليزي (مثل: cat)" class="en-font w-full p-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <div class="flex-1 relative">
+              <input type="text" id="wordAr" oninput="autoTranslate('ar')" placeholder="الترجمة عربي (مثل: قطة)" class="w-full p-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <button onclick="addWordToVocab()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition shrink-0">إضافة</button>
+          </div>
+          <!-- Loading indicator for translation -->
+          <div id="translateLoading" class="hidden text-xs text-indigo-600 font-bold mb-3 animate-pulse">⚡ جاري الترجمة التلقائية...</div>
+
+          <!-- Word Badges List -->
+          <div id="vocabList" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t flex justify-between items-center">
+        <button onclick="deleteArticle()" class="text-rose-600 hover:text-rose-800 text-sm font-bold flex items-center gap-1">
+          <span>🗑️</span> حذف الموضوع
+        </button>
+        <button onclick="closeModal()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-5 py-2 rounded-lg text-sm transition">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Article Modal -->
+  <div id="addModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+      <h2 id="modalFormTitle" class="text-xl font-bold text-slate-800 border-b pb-3">إضافة موضوع جديد</h2>
+      <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">العنوان</label>
+        <input type="text" id="newTitleInput" placeholder="مثال: My Hobbies - هواياتي" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">النص (بالإنجليزية)</label>
+        <textarea id="newContentInput" rows="6" placeholder="اكتب القطعة أو الجمل هنا..." class="en-font w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAddModal()" class="px-4 py-2 rounded-lg border text-slate-600 font-medium">إلغاء</button>
+        <button onclick="saveArticleForm()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const defaultData = [
+      {
+        id: '1',
+        title: 'التعريف بالنفس (Self Introduction)',
+        content: `Hello! My name is Ahmed. I am 25 years old and I live in Cairo. I work as a software designer. In my free time, I love reading books and playing football. Learning English helps me communicate with people all over the world.`,
+        vocab: [
+          { en: 'communicate', ar: 'يتواصل' },
+          { en: 'software', ar: 'برمجيات' }
+        ]
+      },
+      {
+        id: '2',
+        title: 'الروتين اليومي (Daily Routine)',
+        content: `Every morning, I wake up at 7 AM. I drink a cup of coffee and eat my breakfast. Then, I take the bus to go to work. I usually finish my tasks by 5 PM and return home to relax.`,
+        vocab: [
+          { en: 'usually', ar: 'عادةً' },
+          { en: 'tasks', ar: 'مهام' }
+        ]
+      }
+    ];
+
+    let articles = JSON.parse(localStorage.getItem('my_english_articles')) || defaultData;
+    let currentId = null;
+    let viewMode = 'paragraph';
+    let editMode = false;
+    let translateTimer = null;
+
+    function saveToStorage() {
+      localStorage.setItem('my_english_articles', JSON.stringify(articles));
+      renderArticles();
+    }
+
+    function renderArticles() {
+      const grid = document.getElementById('articlesGrid');
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      grid.innerHTML = '';
+
+      const filtered = articles.filter(a => 
+        a.title.toLowerCase().includes(search) || a.content.toLowerCase().includes(search)
+      );
+
+      filtered.forEach(art => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between";
+        card.onclick = () => openModal(art.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="font-bold text-lg text-slate-800">${art.title}</h3>
+              <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-bold">
+                ${art.vocab ? art.vocab.length : 0} مفردات
+              </span>
+            </div>
+            <p class="en-font text-sm text-slate-600 line-clamp-3 mb-4 leading-relaxed">${art.content}</p>
+          </div>
+          <div class="text-xs font-bold text-indigo-600 flex items-center justify-end gap-1">
+            <span>قراءة ومراجعة</span> ⬅️
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openModal(id) {
+      currentId = id;
+      const art = articles.find(a => a.id === id);
+      if (!art) return;
+
+      document.getElementById('modalTitle').innerText = art.title;
+      renderModalContent();
+      renderVocab();
+      document.getElementById('articleModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('articleModal').classList.add('hidden');
+      window.speechSynthesis.cancel();
+    }
+
+    function setMode(mode) {
+      viewMode = mode;
+      const pBtn = document.getElementById('viewParagraphBtn');
+      const sBtn = document.getElementById('viewSentencesBtn');
+
+      if (mode === 'paragraph') {
+        pBtn.className = "px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium shadow-sm transition";
+        sBtn.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-medium hover:bg-slate-300 transition";
+      } else {
+        sBtn.className = "px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium shadow-sm transition";
+        pBtn.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-medium hover:bg-slate-300 transition";
+      }
+      renderModalContent();
+    }
+
+    function renderModalContent() {
+      const art = articles.find(a => a.id === currentId);
+      const container = document.getElementById('modalContent');
+      container.innerHTML = '';
+
+      if (viewMode === 'paragraph') {
+        container.className = "bg-slate-50 p-5 rounded-xl border border-slate-200 text-slate-800 en-font text-base leading-loose select-text";
+        container.innerText = art.content;
+      } else {
+        container.className = "space-y-3 select-text";
+        const sentences = art.content.match(/[^.!?]+[.!?]+/g) || [art.content];
+        sentences.forEach((s, idx) => {
+          const row = document.createElement('div');
+          row.className = "bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between gap-3";
+          row.innerHTML = `
+            <div class="flex gap-2">
+              <span class="text-xs font-bold text-slate-400 mt-1">${idx + 1}.</span>
+              <p class="en-font text-slate-800 font-medium text-base leading-relaxed">${s.trim()}</p>
+            </div>
+            <button onclick="speakText('${s.replace(/'/g, "\\'")}')" class="text-indigo-600 hover:text-indigo-800 p-1.5 bg-indigo-50 rounded-lg shrink-0">🔊</button>
+          `;
+          container.appendChild(row);
+        });
+      }
+    }
+
+    function speakText(txt) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(txt);
+      utter.lang = 'en-US';
+      utter.rate = parseFloat(document.getElementById('speechRate').value);
+      window.speechSynthesis.speak(utter);
+    }
+
+    function speakFullText() {
+      const art = articles.find(a => a.id === currentId);
+      if (art) speakText(art.content);
+    }
+
+    // Floating Popup
+    const pop = document.getElementById('selectionPop');
+    document.addEventListener('selectionchange', () => {
+      const text = window.getSelection().toString().trim();
+      if (text.length > 0) {
+        const range = window.getSelection().getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0) {
+          pop.style.top = `${rect.top - 40}px`;
+          pop.style.left = `${rect.left + (rect.width / 2) - 50}px`;
+          pop.classList.remove('hidden');
+          return;
+        }
+      }
+      pop.classList.add('hidden');
+    });
+
+    function speakSelectedText() {
+      const txt = window.getSelection().toString().trim();
+      if (txt) speakText(txt);
+    }
+
+    function addSelectedWord() {
+      const txt = window.getSelection().toString().trim();
+      if (txt) {
+        document.getElementById('wordEn').value = txt;
+        autoTranslate('en');
+      }
+    }
+
+    // Auto Translate Function (MyMemory API)
+    function autoTranslate(sourceLang) {
+      clearTimeout(translateTimer);
+      const enInput = document.getElementById('wordEn');
+      const arInput = document.getElementById('wordAr');
+      const loading = document.getElementById('translateLoading');
+
+      const text = sourceLang === 'en' ? enInput.value.trim() : arInput.value.trim();
+      if (!text) return;
+
+      translateTimer = setTimeout(async () => {
+        const langPair = sourceLang === 'en' ? 'en|ar' : 'ar|en';
+        loading.classList.remove('hidden');
+
+        try {
+          const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`);
+          const data = await res.json();
+          if (data && data.responseData && data.responseData.translatedText) {
+            const translated = data.responseData.translatedText;
+            if (sourceLang === 'en') {
+              arInput.value = translated;
+            } else {
+              enInput.value = translated;
+            }
+          }
+        } catch (err) {
+          console.log('Error translating text:', err);
+        } finally {
+          loading.classList.add('hidden');
+        }
+      }, 500);
+    }
+
+    // Vocab logic
+    function renderVocab() {
+      const art = articles.find(a => a.id === currentId);
+      const list = document.getElementById('vocabList');
+      list.innerHTML = '';
+
+      if (!art.vocab || art.vocab.length === 0) {
+        list.innerHTML = `<span class="text-xs text-amber-700 italic">لا توجد مفردات مضافة بعد. أضف كلمات مثل cat = قطة</span>`;
+        return;
+      }
+
+      art.vocab.forEach((v, i) => {
+        const badge = document.createElement('div');
+        badge.className = "bg-white border border-amber-300 rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-sm text-sm";
+        badge.innerHTML = `
+          <span class="en-font font-bold text-indigo-700">${v.en}</span>
+          <span class="text-slate-400">=</span>
+          <span class="font-medium text-slate-800">${v.ar}</span>
+          <button onclick="speakText('${v.en}')" class="text-xs hover:opacity-80">🔊</button>
+          <button onclick="removeWord(${i})" class="text-xs text-rose-500 hover:text-rose-700 font-bold mr-1">✕</button>
+        `;
+        list.appendChild(badge);
+      });
+    }
+
+    function addWordToVocab() {
+      const en = document.getElementById('wordEn').value.trim();
+      const ar = document.getElementById('wordAr').value.trim();
+      if (!en || !ar) return;
+
+      const art = articles.find(a => a.id === currentId);
+      if (!art.vocab) art.vocab = [];
+      art.vocab.push({ en, ar });
+      saveToStorage();
+      renderVocab();
+
+      document.getElementById('wordEn').value = '';
+      document.getElementById('wordAr').value = '';
+    }
+
+    function removeWord(i) {
+      const art = articles.find(a => a.id === currentId);
+      if (art && art.vocab) {
+        art.vocab.splice(i, 1);
+        saveToStorage();
+        renderVocab();
+      }
+    }
+
+    function deleteArticle() {
+      if (confirm('هل أنت متأكد من حذف هذا الموضوع؟')) {
+        articles = articles.filter(a => a.id !== currentId);
+        saveToStorage();
+        closeModal();
+      }
+    }
+
+    // Modal Forms for Add & Edit
+    function openAddModal() {
+      editMode = false;
+      document.getElementById('modalFormTitle').innerText = 'إضافة موضوع جديد';
+      document.getElementById('newTitleInput').value = '';
+      document.getElementById('newContentInput').value = '';
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+
+    function openEditModal() {
+      editMode = true;
+      const art = articles.find(a => a.id === currentId);
+      if (!art) return;
+
+      document.getElementById('modalFormTitle').innerText = 'تعديل الموضوع الحالي';
+      document.getElementById('newTitleInput').value = art.title;
+      document.getElementById('newContentInput').value = art.content;
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    function saveArticleForm() {
+      const title = document.getElementById('newTitleInput').value.trim();
+      const content = document.getElementById('newContentInput').value.trim();
+      if (!title || !content) {
+        alert('الرجاء إدخال العنوان والنص');
+        return;
+      }
+
+      if (editMode) {
+        const art = articles.find(a => a.id === currentId);
+        if (art) {
+          art.title = title;
+          art.content = content;
+          document.getElementById('modalTitle').innerText = title;
+          renderModalContent();
+        }
+      } else {
+        articles.unshift({
+          id: Date.now().toString(),
+          title,
+          content,
+          vocab: []
+        });
+      }
+
+      saveToStorage();
+      closeAddModal();
+    }
+
+    renderArticles();
+  </script>
+</body>
+</html>
